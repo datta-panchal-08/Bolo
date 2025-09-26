@@ -4,7 +4,7 @@ import Message from "../models/message.model.js";
 
 export const addFriend = async (req, res) => {
   try {
-    const { friendId } = req.body;
+    const { friendId } = req.params;
     const userId = req.user._id;
 
     if (friendId === userId.toString()) {
@@ -14,11 +14,19 @@ export const addFriend = async (req, res) => {
     const user = await User.findById(userId);
     const friend = await User.findById(friendId);
 
-    if (!friend) return res.status(404).json({ message: "Friend user not found" });
-    if (user.friends.includes(friendId)) return res.status(400).json({ message: "Already friends" });
+    if (!friend) {
+      return res.status(404).json({ message: "Friend user not found" });
+    }
+
+    if (user.friends.includes(friendId)) {
+      return res.status(400).json({ message: "Already friends" });
+    }
 
     user.friends.push(friendId);
+    friend.friends.push(userId);
+
     await user.save();
+    await friend.save();
 
     res.status(200).json({ success: true, message: "Friend added successfully" });
   } catch (error) {
@@ -29,17 +37,19 @@ export const addFriend = async (req, res) => {
 
 export const removeFriend = async (req, res) => {
   try {
-    const { friendId } = req.body;
+    const { friendId } = req.params;
     const userId = req.user._id;
 
     const user = await User.findById(userId);
-
+    const friend = await User.findById(friendId);
     if (!user.friends.includes(friendId)) {
       return res.status(400).json({ message: "Friend not found in your list" });
     }
 
     user.friends = user.friends.filter((id) => id.toString() !== friendId);
+    friend.friends = friend.friends.filter((id)=>id.toString() !== userId);
     await user.save();
+    await friend.save();
 
     const conversations = await Conversation.find({
       members: { $all: [userId, friendId] }
@@ -60,7 +70,7 @@ export const removeFriend = async (req, res) => {
 
 export const getFriends = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).populate("friends", "name email profileUrl");
+    const user = await User.findById(req.user._id).populate("friends", "name email profileUrl isAdmin");
     
     res.status(200).json({
       success: true,
@@ -76,7 +86,7 @@ export const makeFriends = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
 
-    const allUsers = await User.find({ _id: { $ne: req.user._id } }).select("name email profileUrl");
+    const allUsers = await User.find({ _id: { $ne: req.user._id } }).select("name email profileUrl isAdmin");
 
     const nonFriends = allUsers.filter(u => !user.friends.includes(u._id.toString()));
 

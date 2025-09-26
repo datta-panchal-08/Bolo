@@ -4,8 +4,8 @@ import { isAuthenticated } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-router.post("/add", isAuthenticated, addFriend);
-router.post("/remove", isAuthenticated, removeFriend);
+router.post("/add/:friendId", isAuthenticated, addFriend);
+router.post("/remove/:friendId", isAuthenticated, removeFriend);
 router.get("/all", isAuthenticated, getFriends);      
 router.get("/suggestions", isAuthenticated, makeFriends); 
 export default router;
